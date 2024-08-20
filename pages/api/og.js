@@ -1,48 +1,63 @@
-import { ImageResponse } from '@vercel/og';
+import { createCanvas, loadImage, registerFont } from 'canvas';
+import path from 'path';
 
-export const config = {
-  runtime: 'edge',
-};
+// Register a font (you'll need to add a font file to your project)
+registerFont(path.resolve('./public/fonts/Arial.ttf'), { family: 'Arial' });
 
-export default function handler(req) {
+export default async function handler(req, res) {
   try {
-    const { searchParams } = new URL(req.url);
-    const text = searchParams.get('text');
+    const { text } = req.query;
 
     const [year, ...eventText] = text.split(':');
 
-    return new ImageResponse(
-      (
-        <div
-          style={{
-            background: '#1a1a1a',
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            fontFamily: 'Arial, sans-serif',
-            color: '#ffffff',
-            padding: '40px',
-            textAlign: 'center',
-          }}
-        >
-          <div style={{ fontSize: 60, fontWeight: 'bold', marginBottom: '20px' }}>
-            {year}
-          </div>
-          <div style={{ fontSize: 40 }}>
-            {eventText.join(':')}
-          </div>
-        </div>
-      ),
-      {
-        width: 1200,
-        height: 630,
-      }
-    );
+    const canvas = createCanvas(1200, 630);
+    const ctx = canvas.getContext('2d');
+
+    // Set background
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(0, 0, 1200, 630);
+
+    // Set text styles
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+
+    // Draw year
+    ctx.font = 'bold 60px Arial';
+    ctx.fillText(year, 600, 200);
+
+    // Draw event text
+    ctx.font = '40px Arial';
+    const eventLines = wrapText(ctx, eventText.join(':'), 1100);
+    eventLines.forEach((line, index) => {
+      ctx.fillText(line, 600, 280 + index * 50);
+    });
+
+    // Convert canvas to buffer
+    const buffer = canvas.toBuffer('image/png');
+
+    res.setHeader('Content-Type', 'image/png');
+    res.send(buffer);
   } catch (error) {
     console.error('Error generating image:', error);
-    return new Response('Error generating image', { status: 500 });
+    res.status(500).send('Error generating image');
   }
+}
+
+function wrapText(ctx, text, maxWidth) {
+  const words = text.split(' ');
+  const lines = [];
+  let currentLine = words[0];
+
+  for (let i = 1; i < words.length; i++) {
+    const word = words[i];
+    const width = ctx.measureText(currentLine + " " + word).width;
+    if (width < maxWidth) {
+      currentLine += " " + word;
+    } else {
+      lines.push(currentLine);
+      currentLine = word;
+    }
+  }
+  lines.push(currentLine);
+  return lines;
 }
