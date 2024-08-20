@@ -87,6 +87,9 @@ export default async function handler(req, res) {
       } else {
         return handleHistoryNavigation(res, 'current');
       }
+    } else if (req.method === 'GET') {
+      // Handle GET request if needed, or just return the current event
+      return handleHistoryNavigation(res, 'current');
     } else {
       console.log('Method not allowed:', req.method);
       return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
