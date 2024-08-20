@@ -2,7 +2,6 @@ import axios from 'axios';
 
 const VERCEL_OG_API = `${process.env.NEXT_PUBLIC_BASE_URL}/api/og`;
 
-// Function to fetch historical data
 async function fetchHistoricalData() {
   const today = new Date();
   const month = today.getMonth() + 1;
@@ -17,14 +16,12 @@ async function fetchHistoricalData() {
   }
 }
 
-// Function to handle cycling through events
 function getEventByIndex(events, currentIndex) {
   const totalEvents = events.length;
-  const index = ((currentIndex % totalEvents) + totalEvents) % totalEvents; // Ensure index is within bounds
+  const index = ((currentIndex % totalEvents) + totalEvents) % totalEvents;
   return events[index];
 }
 
-// Function to handle requests for historical data
 async function handleHistoryRequest(res, index) {
   let historicalData;
 
@@ -49,29 +46,26 @@ async function handleHistoryRequest(res, index) {
         <meta property="fc:frame:button:1" content="Previous" />
         <meta property="fc:frame:button:2" content="Next" />
         <meta property="fc:frame:button:3" content="Share" />
-       <meta property="fc:frame:image" content="https://warpcast.com/~/compose?text=Check+out+some+moments+in+history+for+today%0A%0Aframe+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app%2F" />
+        <meta property="fc:frame:image" content="https://warpcast.com/~/compose?text=Check+out+some+moments+in+history+for+today%0A%0Aframe+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app%2F" />
       </head>
     </html>
   `);
 }
 
-// Main handler function
 export default async function handler(req, res) {
   console.log('Received request to historyFrame handler');
   console.log('Request method:', req.method);
 
   try {
-    if (req.method === 'POST') {
-      const { untrustedData } = req.body;
+    if (req.method === 'POST' || req.method === 'GET') { // Allow both POST and GET
+      const { untrustedData } = req.body || {};
       const buttonIndex = untrustedData?.buttonIndex;
 
-      // Use a simple index for cycling through events
       let currentIndex = parseInt(untrustedData?.currentIndex) || 0;
 
       if (buttonIndex === 1) currentIndex -= 1; // Previous
       else if (buttonIndex === 2) currentIndex += 1; // Next
       else if (buttonIndex === 3) {
-        // Handle share functionality
         return res.status(200).send(`
           <!DOCTYPE html>
           <html>

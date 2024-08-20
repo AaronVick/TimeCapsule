@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   console.log('Request method:', req.method);
 
   try {
-    if (req.method === 'POST') {
+    if (req.method === 'POST' || req.method === 'GET') { // Allow both POST and GET
       const historicalData = await fetchHistoricalData();
       process.env.todayData = JSON.stringify(historicalData);
 
