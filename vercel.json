@@ -8,12 +8,12 @@
   ],
   "routes": [
     {
-      "src": "/api/initialFetch",
-      "dest": "/api/initialFetch"
-    },
-    {
       "src": "/api/historyFrame",
       "dest": "/api/historyFrame"
+    },
+    {
+      "src": "/api/initialFetch",
+      "dest": "/api/initialFetch"
     },
     {
       "src": "/api/og",

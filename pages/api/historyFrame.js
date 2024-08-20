@@ -25,19 +25,22 @@ function getEventByIndex(events, currentIndex) {
 export default async function handler(req, res) {
   console.log('Received request to historyFrame handler');
   console.log('Request method:', req.method);
-  console.log('Request body:', req.body);
+  console.log('Request body:', JSON.stringify(req.body));
+  console.log('Request headers:', JSON.stringify(req.headers));
 
   try {
-    if (req.method === 'POST') {
+    // Accept both POST and GET requests
+    if (req.method === 'POST' || req.method === 'GET') {
       let currentIndex = 0;
+      let buttonIndex = 0;
 
-      if (req.body && req.body.untrustedData) {
-        const { buttonIndex, currentIndex: prevIndex } = req.body.untrustedData;
-        currentIndex = parseInt(prevIndex) || 0;
-
-        if (buttonIndex === 1) currentIndex -= 1; // Previous
-        else if (buttonIndex === 2) currentIndex += 1; // Next
+      if (req.method === 'POST' && req.body && req.body.untrustedData) {
+        buttonIndex = req.body.untrustedData.buttonIndex;
+        currentIndex = parseInt(req.body.untrustedData.currentIndex) || 0;
       }
+
+      if (buttonIndex === 1) currentIndex -= 1; // Previous
+      else if (buttonIndex === 2) currentIndex += 1; // Next
 
       let historicalData = process.env.todayData
         ? JSON.parse(process.env.todayData)
@@ -65,24 +68,6 @@ export default async function handler(req, res) {
             <meta property="fc:frame:button:3" content="Share" />
             <meta property="fc:frame:post_url" content="https://time-capsule-jade.vercel.app/api/historyFrame" />
           </head>
-          <body>
-            <script>
-              window.addEventListener('message', function(e) {
-                if (e.data && e.data.buttonIndex) {
-                  fetch('https://time-capsule-jade.vercel.app/api/historyFrame', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      untrustedData: {
-                        buttonIndex: e.data.buttonIndex,
-                        currentIndex: ${currentIndex}
-                      }
-                    })
-                  });
-                }
-              });
-            </script>
-          </body>
         </html>
       `);
     } else {
