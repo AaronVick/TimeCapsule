@@ -61,7 +61,7 @@ export default async function handler(req, res) {
   console.log('Request method:', req.method);
 
   try {
-    if (req.method === 'POST' || req.method === 'GET') { // Handle both POST and GET requests
+    if (req.method === 'POST') { // Expecting POST requests only
       const { untrustedData } = req.body || {};
       const buttonIndex = untrustedData?.buttonIndex;
 
