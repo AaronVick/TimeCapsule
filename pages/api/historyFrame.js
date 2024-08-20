@@ -16,16 +16,22 @@ async function fetchHistoricalData() {
   }
 }
 
-function getHistoricalEvent(events, year = null) {
-  if (year) {
-    const filteredEvents = events.filter(event => parseInt(event.year) <= year);
-    return filteredEvents[Math.floor(Math.random() * filteredEvents.length)];
+function getHistoricalEvent(events, targetYear = null) {
+  if (targetYear) {
+    const filteredEvents = events.filter(event => parseInt(event.year) === targetYear);
+    if (filteredEvents.length > 0) {
+      return filteredEvents[Math.floor(Math.random() * filteredEvents.length)];
+    } else {
+      // If no events are found for the exact year, fallback to nearest earlier year
+      const closestEvents = events.filter(event => parseInt(event.year) < targetYear);
+      return closestEvents[Math.floor(Math.random() * closestEvents.length)];
+    }
   } else {
     return events[Math.floor(Math.random() * events.length)];
   }
 }
 
-async function handleHistoryRequest(res, year = null) {
+async function handleHistoryRequest(res, targetYear = null) {
   let historicalData;
   
   if (process.env.todayData) {
@@ -35,7 +41,7 @@ async function handleHistoryRequest(res, year = null) {
     process.env.todayData = JSON.stringify(historicalData);
   }
 
-  const event = getHistoricalEvent(historicalData.Events, year);
+  const event = getHistoricalEvent(historicalData.Events, targetYear);
   const text = `${event.year}: ${event.text}`;
   const ogImageUrl = `${VERCEL_OG_API}?text=${encodeURIComponent(text)}`;
 
@@ -66,9 +72,10 @@ export default async function handler(req, res) {
       const buttonIndex = untrustedData?.buttonIndex;
 
       let year = null;
-      if (buttonIndex === 1) year = new Date().getFullYear() - 10;
-      else if (buttonIndex === 2) year = new Date().getFullYear() - 25;
-      else if (buttonIndex === 3) year = new Date().getFullYear() - 50;
+      const currentYear = new Date().getFullYear();
+      if (buttonIndex === 1) year = currentYear - 10;
+      else if (buttonIndex === 2) year = currentYear - 25;
+      else if (buttonIndex === 3) year = currentYear - 50;
       else if (buttonIndex === 4) {
         // Handle share functionality
         return res.status(200).send(`
