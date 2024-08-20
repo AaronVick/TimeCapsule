@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const VERCEL_OG_API = `${process.env.NEXT_PUBLIC_BASE_URL}/api/og`;
 
+// Function to fetch historical data
 async function fetchHistoricalData() {
   const today = new Date();
   const month = today.getMonth() + 1;
@@ -16,24 +17,17 @@ async function fetchHistoricalData() {
   }
 }
 
-function getHistoricalEvent(events, targetYear = null) {
-  if (targetYear) {
-    const filteredEvents = events.filter(event => parseInt(event.year) === targetYear);
-    if (filteredEvents.length > 0) {
-      return filteredEvents[Math.floor(Math.random() * filteredEvents.length)];
-    } else {
-      // If no events are found for the exact year, fallback to nearest earlier year
-      const closestEvents = events.filter(event => parseInt(event.year) < targetYear);
-      return closestEvents[Math.floor(Math.random() * closestEvents.length)];
-    }
-  } else {
-    return events[Math.floor(Math.random() * events.length)];
-  }
+// Function to handle cycling through events
+function getEventByIndex(events, currentIndex) {
+  const totalEvents = events.length;
+  const index = ((currentIndex % totalEvents) + totalEvents) % totalEvents; // Ensure index is within bounds
+  return events[index];
 }
 
-async function handleHistoryRequest(res, targetYear = null) {
+// Function to handle requests for historical data
+async function handleHistoryRequest(res, index) {
   let historicalData;
-  
+
   if (process.env.todayData) {
     historicalData = JSON.parse(process.env.todayData);
   } else {
@@ -41,7 +35,7 @@ async function handleHistoryRequest(res, targetYear = null) {
     process.env.todayData = JSON.stringify(historicalData);
   }
 
-  const event = getHistoricalEvent(historicalData.Events, targetYear);
+  const event = getEventByIndex(historicalData.Events, index);
   const text = `${event.year}: ${event.text}`;
   const ogImageUrl = `${VERCEL_OG_API}?text=${encodeURIComponent(text)}`;
 
@@ -52,16 +46,16 @@ async function handleHistoryRequest(res, targetYear = null) {
       <head>
         <meta property="fc:frame" content="vNext" />
         <meta property="fc:frame:image" content="${ogImageUrl}" />
-        <meta property="fc:frame:button:1" content="10 Years Ago" />
-        <meta property="fc:frame:button:2" content="25 Years Ago" />
-        <meta property="fc:frame:button:3" content="50 Years Ago" />
-        <meta property="fc:frame:button:4" content="Share" />
-        <meta property="fc:frame:post_url" content="https://time-capsule-jade.vercel.app/api/historyFrame" />
+        <meta property="fc:frame:button:1" content="Previous" />
+        <meta property="fc:frame:button:2" content="Next" />
+        <meta property="fc:frame:button:3" content="Share" />
+       <meta property="fc:frame:image" content="https://warpcast.com/~/compose?text=Check+out+some+moments+in+history+for+today%0A%0Aframe+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app%2F" />
       </head>
     </html>
   `);
 }
 
+// Main handler function
 export default async function handler(req, res) {
   console.log('Received request to historyFrame handler');
   console.log('Request method:', req.method);
@@ -71,12 +65,12 @@ export default async function handler(req, res) {
       const { untrustedData } = req.body;
       const buttonIndex = untrustedData?.buttonIndex;
 
-      let year = null;
-      const currentYear = new Date().getFullYear();
-      if (buttonIndex === 1) year = currentYear - 10;
-      else if (buttonIndex === 2) year = currentYear - 25;
-      else if (buttonIndex === 3) year = currentYear - 50;
-      else if (buttonIndex === 4) {
+      // Use a simple index for cycling through events
+      let currentIndex = parseInt(untrustedData?.currentIndex) || 0;
+
+      if (buttonIndex === 1) currentIndex -= 1; // Previous
+      else if (buttonIndex === 2) currentIndex += 1; // Next
+      else if (buttonIndex === 3) {
         // Handle share functionality
         return res.status(200).send(`
           <!DOCTYPE html>
@@ -85,13 +79,13 @@ export default async function handler(req, res) {
               <meta property="fc:frame" content="vNext" />
               <meta property="fc:frame:image" content="${VERCEL_OG_API}?text=${encodeURIComponent('Check out some moments in history for today!')}" />
               <meta property="fc:frame:button:1" content="Back to History" />
-              <meta property="fc:frame:post_url" content="https://your-vercel-url.vercel.app/api/historyFrame" />
+              <meta property="fc:frame:post_url" content="https://time-capsule-jade.vercel.app/api/historyFrame" />
             </head>
           </html>
         `);
       }
 
-      return handleHistoryRequest(res, year);
+      return handleHistoryRequest(res, currentIndex);
     } else {
       console.log('Method not allowed:', req.method);
       return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
