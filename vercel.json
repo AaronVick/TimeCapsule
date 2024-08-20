@@ -8,24 +8,16 @@
   ],
   "routes": [
     {
-      "src": "/api/triviaFrame",
-      "dest": "/api/triviaFrame",
-      "methods": ["GET", "POST", "OPTIONS"]
+      "src": "/api/historyFrame",
+      "dest": "/api/historyFrame"
+    },
+    {
+      "src": "/api/initialFetch",
+      "dest": "/api/initialFetch"
     },
     {
       "src": "/api/og",
-      "dest": "/api/og",
-      "methods": ["GET", "POST", "OPTIONS"]
-    },
-    {
-      "src": "/api/historyFrame",
-      "dest": "/api/historyFrame",
-      "methods": ["GET", "POST", "OPTIONS"]
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1",
-      "methods": ["GET", "POST", "OPTIONS"]
+      "dest": "/api/og"
     },
     {
       "src": "/(.*)",

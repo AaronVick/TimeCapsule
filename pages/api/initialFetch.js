@@ -21,11 +21,12 @@ export default async function handler(req, res) {
   console.log('Request method:', req.method);
 
   try {
-    if (req.method === 'POST' || req.method === 'GET') { // Allow both POST and GET
+    if (req.method === 'POST' || req.method === 'GET') {
       const historicalData = await fetchHistoricalData();
       process.env.todayData = JSON.stringify(historicalData);
+      process.env.currentIndex = '0';  // Initialize the current index
 
-      const event = historicalData.Events[Math.floor(Math.random() * historicalData.Events.length)];
+      const event = historicalData.Events[0];  // Start with the first event
       const text = `${event.year}: ${event.text}`;
       const ogImageUrl = `${VERCEL_OG_API}?text=${encodeURIComponent(text)}`;
 
@@ -39,7 +40,7 @@ export default async function handler(req, res) {
             <meta property="fc:frame:button:1" content="Previous" />
             <meta property="fc:frame:button:2" content="Next" />
             <meta property="fc:frame:button:3" content="Share" />
-            <meta property="fc:frame:image" content="https://warpcast.com/~/compose?text=Check+out+some+moments+in+history+for+today%0A%0Aframe+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app%2F" />
+            <meta property="fc:frame:post_url" content="https://time-capsule-jade.vercel.app/api/historyFrame" />
           </head>
         </html>
       `);
