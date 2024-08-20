@@ -28,6 +28,8 @@ function getEventByIndex(events, currentIndex) {
 export default async function handler(req, res) {
   console.log('Received request to historyFrame handler');
   console.log(`Request method: ${req.method}`);
+  console.log(`Request headers: ${JSON.stringify(req.headers)}`);
+  console.log(`Request body: ${JSON.stringify(req.body)}`);
 
   try {
     if (req.method === 'POST') {
