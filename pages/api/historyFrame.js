@@ -5,17 +5,22 @@ const VERCEL_OG_API = `${process.env.NEXT_PUBLIC_BASE_URL}/api/og`;
 // Get the event by cycling through the cached list using an index
 function getEventByIndex(events, currentIndex) {
   const totalEvents = events.length;
-  const index = ((currentIndex % totalEvents) + totalEvents) % totalEvents; // Ensure index is within bounds
+  const index = ((currentIndex % totalEvents) + totalEvents) % totalEvents;
   return events[index];
 }
 
 // Main handler function to process incoming requests
 export default async function handler(req, res) {
   console.log('Received request to historyFrame handler');
-  console.log(`Request method: ${req.method}`);
+  console.log(`Original request method: ${req.method}`);
+
+  // Temporarily force POST handling
+  const method = req.method === 'POST' || req.method === 'GET' ? 'POST' : req.method;
+
+  console.log(`Handling request as method: ${method}`);
 
   try {
-    if (req.method === 'POST') {
+    if (method === 'POST') {
       const { untrustedData } = req.body || {};
       const buttonIndex = untrustedData?.buttonIndex;
 
@@ -49,24 +54,15 @@ export default async function handler(req, res) {
             <meta property="fc:frame" content="vNext" />
             <meta property="fc:frame:image" content="${ogImageUrl}" />
             <meta property="fc:frame:button:1" content="Previous" />
-            <meta property="fc:frame:button:1:action" content="post" />
-            <meta property="fc:frame:button:1:target" content="https://time-capsule-jade.vercel.app/api/historyFrame" />
-            <meta property="fc:frame:button:1:post_body" content='{"untrustedData": {"buttonIndex": 1, "currentIndex": ${currentIndex}}}' />
-            
             <meta property="fc:frame:button:2" content="Next" />
-            <meta property="fc:frame:button:2:action" content="post" />
-            <meta property="fc:frame:button:2:target" content="https://time-capsule-jade.vercel.app/api/historyFrame" />
-            <meta property="fc:frame:button:2:post_body" content='{"untrustedData": {"buttonIndex": 2, "currentIndex": ${currentIndex}}}' />
-
             <meta property="fc:frame:button:3" content="Share" />
-            <meta property="fc:frame:button:3:action" content="link" />
-            <meta property="fc:frame:button:3:target" content="https://warpcast.com/~/compose?text=Check+out+some+moments+in+history+for+today%0A%0Aframe+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app%2F" />
+            <meta property="fc:frame:image" content="https://warpcast.com/~/compose?text=Check+out+some+moments+in+history+for+today%0A%0Aframe+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app%2F" />
           </head>
         </html>
       `);
     } else {
-      console.log(`Method ${req.method} not allowed.`);
-      return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+      console.log(`Method ${method} not allowed.`);
+      return res.status(405).json({ error: `Method ${method} Not Allowed` });
     }
   } catch (error) {
     console.error('Error processing request:', error);
