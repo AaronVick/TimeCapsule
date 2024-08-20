@@ -2,12 +2,11 @@ import axios from 'axios';
 
 const VERCEL_OG_API = `${process.env.NEXT_PUBLIC_BASE_URL}/api/og`;
 
-// Fetch data if the cache is empty
 async function fetchHistoricalData() {
   const today = new Date();
   const month = today.getMonth() + 1;
   const day = today.getDate();
-
+  
   try {
     const response = await axios.get(`https://history.muffinlabs.com/date/${month}/${day}`);
     return response.data.data;
@@ -17,34 +16,35 @@ async function fetchHistoricalData() {
   }
 }
 
-// Get the event by cycling through the cached list using an index
 function getEventByIndex(events, currentIndex) {
   const totalEvents = events.length;
-  const index = ((currentIndex % totalEvents) + totalEvents) % totalEvents; // Ensure index is within bounds
+  const index = ((currentIndex % totalEvents) + totalEvents) % totalEvents;
   return events[index];
 }
 
 export default async function handler(req, res) {
   console.log('Received request to historyFrame handler');
-  console.log(`Request method: ${req.method}`);
+  console.log('Request method:', req.method);
+  console.log('Request body:', req.body);
 
   try {
     if (req.method === 'POST') {
-      const { untrustedData } = req.body || {};
-      const buttonIndex = untrustedData?.buttonIndex;
-      let currentIndex = parseInt(untrustedData?.currentIndex) || 0;
+      let currentIndex = 0;
 
-      // Adjust the index based on the button clicked
-      if (buttonIndex === 1) currentIndex -= 1; // Previous
-      else if (buttonIndex === 2) currentIndex += 1; // Next
+      if (req.body && req.body.untrustedData) {
+        const { buttonIndex, currentIndex: prevIndex } = req.body.untrustedData;
+        currentIndex = parseInt(prevIndex) || 0;
 
-      // Retrieve cached data or fetch if not available
+        if (buttonIndex === 1) currentIndex -= 1; // Previous
+        else if (buttonIndex === 2) currentIndex += 1; // Next
+      }
+
       let historicalData = process.env.todayData
-        ? JSON.parse(process.env.todayData)  // Use cached data
-        : await fetchHistoricalData();       // Fallback to API fetch if cache is missing
+        ? JSON.parse(process.env.todayData)
+        : await fetchHistoricalData();
 
       if (!process.env.todayData) {
-        process.env.todayData = JSON.stringify(historicalData);  // Cache the data after initial fetch
+        process.env.todayData = JSON.stringify(historicalData);
       }
 
       const event = getEventByIndex(historicalData.Events, currentIndex);
@@ -53,7 +53,6 @@ export default async function handler(req, res) {
 
       console.log(`Serving event: ${text}`);
 
-      // Return the image and the updated index in the response
       res.setHeader('Content-Type', 'text/html');
       return res.status(200).send(`
         <!DOCTYPE html>
@@ -62,23 +61,32 @@ export default async function handler(req, res) {
             <meta property="fc:frame" content="vNext" />
             <meta property="fc:frame:image" content="${ogImageUrl}" />
             <meta property="fc:frame:button:1" content="Previous" />
-            <meta property="fc:frame:button:1:action" content="post" />
-            <meta property="fc:frame:button:1:target" content="https://time-capsule-jade.vercel.app/api/historyFrame" />
-            <meta property="fc:frame:button:1:post_body" content='{"untrustedData": {"buttonIndex": 1, "currentIndex": ${currentIndex}}}' />
-            
             <meta property="fc:frame:button:2" content="Next" />
-            <meta property="fc:frame:button:2:action" content="post" />
-            <meta property="fc:frame:button:2:target" content="https://time-capsule-jade.vercel.app/api/historyFrame" />
-            <meta property="fc:frame:button:2:post_body" content='{"untrustedData": {"buttonIndex": 2, "currentIndex": ${currentIndex}}}' />
-
             <meta property="fc:frame:button:3" content="Share" />
-            <meta property="fc:frame:button:3:action" content="link" />
-            <meta property="fc:frame:button:3:target" content="https://warpcast.com/~/compose?text=Check+out+some+moments+in+history+for+today%0A%0Aframe+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app%2F" />
+            <meta property="fc:frame:post_url" content="https://time-capsule-jade.vercel.app/api/historyFrame" />
           </head>
+          <body>
+            <script>
+              window.addEventListener('message', function(e) {
+                if (e.data && e.data.buttonIndex) {
+                  fetch('https://time-capsule-jade.vercel.app/api/historyFrame', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      untrustedData: {
+                        buttonIndex: e.data.buttonIndex,
+                        currentIndex: ${currentIndex}
+                      }
+                    })
+                  });
+                }
+              });
+            </script>
+          </body>
         </html>
       `);
     } else {
-      console.log(`Method ${req.method} not allowed.`);
+      console.log('Method not allowed:', req.method);
       return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
     }
   } catch (error) {
