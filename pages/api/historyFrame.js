@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { v4 as uuidv4 } from 'uuid'; // Using uuid to generate unique identifiers
 
 const VERCEL_OG_API = `${process.env.NEXT_PUBLIC_BASE_URL}/api/og`;
 
@@ -26,17 +27,18 @@ function getEventByIndex(events, currentIndex) {
 
 // Main handler function to process incoming requests
 export default async function handler(req, res) {
-  console.log('Received request to historyFrame handler');
-  console.log(`Request method: ${req.method}`);
-  console.log(`Request headers: ${JSON.stringify(req.headers)}`);
-  console.log(`Request body: ${JSON.stringify(req.body)}`);
+  const requestId = uuidv4(); // Generate a unique ID for this request
+  console.log(`[${requestId}] Received request to historyFrame handler`);
+  console.log(`[${requestId}] Request method: ${req.method}`);
+  console.log(`[${requestId}] Request headers: ${JSON.stringify(req.headers)}`);
+  console.log(`[${requestId}] Request body: ${JSON.stringify(req.body)}`);
 
   try {
     if (req.method === 'POST') {
       const { untrustedData } = req.body || {};
       const buttonIndex = untrustedData?.buttonIndex;
 
-      console.log(`Button Index: ${buttonIndex}`);
+      console.log(`[${requestId}] Button Index: ${buttonIndex}`);
 
       // Using a simple index for cycling through events
       let currentIndex = parseInt(untrustedData?.currentIndex) || 0;
@@ -47,10 +49,10 @@ export default async function handler(req, res) {
       let historicalData;
 
       if (process.env.todayData) {
-        console.log('Using cached historical data.');
+        console.log(`[${requestId}] Using cached historical data.`);
         historicalData = JSON.parse(process.env.todayData);
       } else {
-        console.log('Fetching new historical data.');
+        console.log(`[${requestId}] Fetching new historical data.`);
         historicalData = await fetchHistoricalData();
         process.env.todayData = JSON.stringify(historicalData);
       }
@@ -59,7 +61,7 @@ export default async function handler(req, res) {
       const text = `${event.year}: ${event.text}`;
       const ogImageUrl = `${VERCEL_OG_API}?text=${encodeURIComponent(text)}`;
 
-      console.log(`Serving event: ${text}`);
+      console.log(`[${requestId}] Serving event: ${text}`);
 
       res.setHeader('Content-Type', 'text/html');
       return res.status(200).send(`
@@ -76,11 +78,11 @@ export default async function handler(req, res) {
         </html>
       `);
     } else {
-      console.log(`Method ${req.method} not allowed.`);
+      console.log(`[${requestId}] Method ${req.method} not allowed.`);
       return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
     }
   } catch (error) {
-    console.error('Error processing request:', error);
+    console.error(`[${requestId}] Error processing request:`, error);
     return res.status(500).json({ error: 'Internal Server Error: ' + error.message });
   }
 }
