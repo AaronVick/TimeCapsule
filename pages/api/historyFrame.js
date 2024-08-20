@@ -29,8 +29,10 @@ async function handleHistoryRequest(res, index) {
   let historicalData;
 
   if (process.env.todayData) {
+    console.log('Using cached historical data.');
     historicalData = JSON.parse(process.env.todayData);
   } else {
+    console.log('Fetching new historical data.');
     historicalData = await fetchHistoricalData();
     process.env.todayData = JSON.stringify(historicalData);
   }
@@ -38,6 +40,8 @@ async function handleHistoryRequest(res, index) {
   const event = getEventByIndex(historicalData.Events, index);
   const text = `${event.year}: ${event.text}`;
   const ogImageUrl = `${VERCEL_OG_API}?text=${encodeURIComponent(text)}`;
+
+  console.log(`Serving event: ${text}`);
 
   res.setHeader('Content-Type', 'text/html');
   return res.status(200).send(`
@@ -58,12 +62,15 @@ async function handleHistoryRequest(res, index) {
 // Main handler function to process incoming requests
 export default async function handler(req, res) {
   console.log('Received request to historyFrame handler');
-  console.log('Request method:', req.method);
+  console.log(`Request method: ${req.method}`);
+  console.log(`Request body: ${JSON.stringify(req.body)}`);
 
   try {
     if (req.method === 'POST') { // Expecting POST requests only
       const { untrustedData } = req.body || {};
       const buttonIndex = untrustedData?.buttonIndex;
+
+      console.log(`Button Index: ${buttonIndex}`);
 
       let currentIndex = parseInt(untrustedData?.currentIndex) || 0;
 
@@ -71,6 +78,7 @@ export default async function handler(req, res) {
       else if (buttonIndex === 2) currentIndex += 1; // Next button
       else if (buttonIndex === 3) {
         // Share functionality
+        console.log('Handling share functionality.');
         return res.status(200).send(`
           <!DOCTYPE html>
           <html>
@@ -86,7 +94,7 @@ export default async function handler(req, res) {
 
       return handleHistoryRequest(res, currentIndex);
     } else {
-      console.log('Method not allowed:', req.method);
+      console.log(`Method ${req.method} not allowed.`);
       return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
     }
   } catch (error) {
