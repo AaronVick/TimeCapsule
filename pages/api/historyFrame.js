@@ -2,6 +2,22 @@ import axios from 'axios';
 
 const VERCEL_OG_API = `${process.env.NEXT_PUBLIC_BASE_URL}/api/og`;
 
+// Fetch data if the cache is empty
+async function fetchHistoricalData() {
+  const today = new Date();
+  const month = today.getMonth() + 1;
+  const day = today.getDate();
+
+  try {
+    const response = await axios.get(`https://history.muffinlabs.com/date/${month}/${day}`);
+    return response.data.data;
+  } catch (error) {
+    console.error('Error fetching historical data:', error);
+    throw new Error('Failed to fetch historical data');
+  }
+}
+
+// Get the event by cycling through the cached list using an index
 function getEventByIndex(events, currentIndex) {
   const totalEvents = events.length;
   const index = ((currentIndex % totalEvents) + totalEvents) % totalEvents;
@@ -44,7 +60,7 @@ async function handleHistoryNavigation(res, direction) {
         <meta property="fc:frame:button:1" content="Previous" />
         <meta property="fc:frame:button:2" content="Next" />
         <meta property="fc:frame:button:3" content="Share" />
-        <meta property="fc:frame:post_url" content="https://time-capsule-jade.vercel.app/api/historyFrame" />
+        <meta property="fc:frame:image" content="https://warpcast.com/~/compose?text=Check+out+some+moments+in+history+for+today%0A%0Aframe+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app%2F" />
       </head>
     </html>
   `);
@@ -56,8 +72,8 @@ export default async function handler(req, res) {
   console.log('Request body:', JSON.stringify(req.body));
 
   try {
-    if (req.method === 'POST') {
-      const { untrustedData } = req.body;
+    if (req.method === 'POST' || req.method === 'GET') {
+      const { untrustedData } = req.body || {};
       const buttonIndex = untrustedData?.buttonIndex;
 
       if (buttonIndex === 1) {
@@ -87,9 +103,6 @@ export default async function handler(req, res) {
       } else {
         return handleHistoryNavigation(res, 'current');
       }
-    } else if (req.method === 'GET') {
-      // Handle GET request if needed, or just return the current event
-      return handleHistoryNavigation(res, 'current');
     } else {
       console.log('Method not allowed:', req.method);
       return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
