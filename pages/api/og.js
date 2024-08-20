@@ -1,7 +1,8 @@
 import { ImageResponse } from '@vercel/og';
 
+// Optimize by using lighter-weight libraries or reducing the complexity of this component
 export const config = {
-  runtime: 'experimental-edge', // Changed from 'edge' to 'experimental-edge'
+  runtime: 'experimental-edge',
 };
 
 export default function handler(req) {
@@ -15,23 +16,23 @@ export default function handler(req) {
       (
         <div
           style={{
-            background: '#1a1a1a',
+            background: '#000000', // Reduced color complexity
             width: '100%',
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'Arial, sans-serif', // Use a standard font
             color: '#ffffff',
-            padding: '40px',
+            padding: '20px', // Reduced padding
             textAlign: 'center',
           }}
         >
-          <div style={{ fontSize: 60, fontWeight: 'bold', marginBottom: '20px' }}>
+          <div style={{ fontSize: 50, fontWeight: 'bold', marginBottom: '10px' }}>
             {year}
           </div>
-          <div style={{ fontSize: 40, maxWidth: '80%', wordWrap: 'break-word' }}>
+          <div style={{ fontSize: 30, maxWidth: '80%', wordWrap: 'break-word' }}>
             {eventText.join(':')}
           </div>
         </div>
