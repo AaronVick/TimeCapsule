@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const VERCEL_OG_API = `${process.env.NEXT_PUBLIC_BASE_URL}/api/og`;
 
+// Fetch historical data from the API
 async function fetchHistoricalData() {
   const today = new Date();
   const month = today.getMonth() + 1;
@@ -16,12 +17,14 @@ async function fetchHistoricalData() {
   }
 }
 
+// Get the event by cycling through the list using an index
 function getEventByIndex(events, currentIndex) {
   const totalEvents = events.length;
   const index = ((currentIndex % totalEvents) + totalEvents) % totalEvents;
   return events[index];
 }
 
+// Handle the request by fetching and cycling through data
 async function handleHistoryRequest(res, index) {
   let historicalData;
 
@@ -52,20 +55,22 @@ async function handleHistoryRequest(res, index) {
   `);
 }
 
+// Main handler function to process incoming requests
 export default async function handler(req, res) {
   console.log('Received request to historyFrame handler');
   console.log('Request method:', req.method);
 
   try {
-    if (req.method === 'POST' || req.method === 'GET') { // Allow both POST and GET
+    if (req.method === 'POST' || req.method === 'GET') { // Handle both POST and GET requests
       const { untrustedData } = req.body || {};
       const buttonIndex = untrustedData?.buttonIndex;
 
       let currentIndex = parseInt(untrustedData?.currentIndex) || 0;
 
-      if (buttonIndex === 1) currentIndex -= 1; // Previous
-      else if (buttonIndex === 2) currentIndex += 1; // Next
+      if (buttonIndex === 1) currentIndex -= 1; // Previous button
+      else if (buttonIndex === 2) currentIndex += 1; // Next button
       else if (buttonIndex === 3) {
+        // Share functionality
         return res.status(200).send(`
           <!DOCTYPE html>
           <html>
