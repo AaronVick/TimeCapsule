@@ -50,7 +50,7 @@ async function handleHistoryRequest(res, year = null) {
         <meta property="fc:frame:button:2" content="25 Years Ago" />
         <meta property="fc:frame:button:3" content="50 Years Ago" />
         <meta property="fc:frame:button:4" content="Share" />
-        <meta property="fc:frame:post_url" content="https://your-vercel-url.vercel.app/api/historyFrame" />
+        <meta property="fc:frame:post_url" content="https://time-capsule-jade.vercel.app/api/historyFrame" />
       </head>
     </html>
   `);
