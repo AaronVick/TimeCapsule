@@ -39,7 +39,7 @@ export default async function handler(req, res) {
 
     console.log(`Serving event: ${text} (Index: ${currentIndex})`);
 
-    // Minimal HTML for testing buttons
+    // Updated HTML with button meta tags similar to findFren.js
     res.setHeader('Content-Type', 'text/html');
     return res.status(200).send(`
       <!DOCTYPE html>
@@ -48,6 +48,7 @@ export default async function handler(req, res) {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta property="fc:frame" content="vNext" />
+        <meta property="fc:frame:image" content="${ogImageUrl}" />
         
         <!-- Button Meta Tags -->
         <meta property="fc:frame:button:1" content="Previous" />
@@ -63,7 +64,8 @@ export default async function handler(req, res) {
         <meta property="fc:frame:button:3:target" content="https://warpcast.com/~/compose?text=Check+out+today's+moments+in+history!%0A%0AFrame+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app" />
       </head>
       <body>
-        <h1>Testing Buttons Visibility</h1>
+        <h1>${text}</h1>
+        <img src="${ogImageUrl}" alt="Historical event" />
       </body>
       </html>
     `);
@@ -72,4 +74,10 @@ export default async function handler(req, res) {
     console.error('An unexpected error occurred:', error);
     return res.status(500).json({ error: 'An unexpected error occurred' });
   }
+}
+
+function getEventByIndex(events, currentIndex) {
+  const totalEvents = events.length;
+  const index = ((currentIndex % totalEvents) + totalEvents) % totalEvents;
+  return events[index];
 }
