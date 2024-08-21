@@ -8,12 +8,12 @@ function getEventByIndex(events, currentIndex) {
   return events[index];
 }
 
-async function handleHistoryNavigation(req, res, direction) {
+export default async function handler(req, res) {
   try {
+    const { direction } = req.query;
     let historicalData;
     let currentIndex;
 
-    // Check if todayData is available in environment variables
     if (process.env.todayData) {
       try {
         historicalData = JSON.parse(process.env.todayData);
@@ -27,7 +27,6 @@ async function handleHistoryNavigation(req, res, direction) {
       return res.status(500).json({ error: 'Historical data not available' });
     }
 
-    // Adjust the current index based on navigation direction
     if (direction === 'next') {
       currentIndex += 1;
     } else if (direction === 'previous') {
@@ -37,7 +36,6 @@ async function handleHistoryNavigation(req, res, direction) {
       return res.status(400).json({ error: 'Invalid navigation direction' });
     }
 
-    // Ensure the currentIndex is wrapped around properly
     process.env.currentIndex = currentIndex.toString();
     const event = getEventByIndex(historicalData.Events, currentIndex);
     
@@ -51,7 +49,6 @@ async function handleHistoryNavigation(req, res, direction) {
 
     console.log(`Serving event: ${text} (Index: ${currentIndex})`);
 
-    // Prepare and send the HTML response
     res.setHeader('Content-Type', 'text/html');
     return res.status(200).send(`
       <!DOCTYPE html>
@@ -60,9 +57,9 @@ async function handleHistoryNavigation(req, res, direction) {
           <meta property="fc:frame" content="vNext" />
           <meta property="fc:frame:image" content="${ogImageUrl}" />
           <meta property="fc:frame:button:1:action" content="link" />
-          <meta property="fc:frame:button:1:target" content="/previous" />
+          <meta property="fc:frame:button:1:target" content="/api/historyFrame?direction=previous" />
           <meta property="fc:frame:button:2:action" content="link" />
-          <meta property="fc:frame:button:2:target" content="/next" />
+          <meta property="fc:frame:button:2:target" content="/api/historyFrame?direction=next" />
           <meta property="fc:frame:button:3:action" content="link" />
           <meta property="fc:frame:button:3:target" content="https://warpcast.com/~/compose?text=Check+out+today's+moments+in+history!%0A%0AFrame+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app" />
         </head>
