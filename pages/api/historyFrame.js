@@ -8,93 +8,70 @@ function getEventByIndex(events, currentIndex) {
   return events[index];
 }
 
-async function handleHistoryNavigation(res, direction) {
-  let historicalData;
-  let currentIndex;
-
-  if (process.env.todayData) {
-    historicalData = JSON.parse(process.env.todayData);
-    currentIndex = parseInt(process.env.currentIndex || '0');
-  } else {
-    console.error('Historical data not found in environment variable');
-    return res.status(500).json({ error: 'Historical data not available' });
-  }
-
-  if (direction === 'next') {
-    currentIndex += 1;
-  } else if (direction === 'previous') {
-    currentIndex -= 1;
-  }
-
-  process.env.currentIndex = currentIndex.toString();
-
-  const event = getEventByIndex(historicalData.Events, currentIndex);
-  const text = `${event.year}: ${event.text}`;
-  const ogImageUrl = `${VERCEL_OG_API}?text=${encodeURIComponent(text)}`;
-
-  console.log(`Serving event: ${text}`);
-
-  res.setHeader('Content-Type', 'text/html');
-  return res.status(200).send(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta property="fc:frame" content="vNext" />
-        <meta property="fc:frame:image" content="${ogImageUrl}" />
-        <meta property="fc:frame:button:1" content="Previous" />
-        <meta property="fc:frame:button:2" content="Next" />
-        <meta property="fc:frame:button:3:action" content="link" />
-        <meta property="fc:frame:button:3:target" content="https://warpcast.com/~/compose?text=Check+out+today's+moments+in+history!%0A%0AFrame+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app" />
-      </head>
-    </html>
-  `);
-}
-
-export default async function handler(req, res) {
-  console.log('Received request to historyFrame handler');
-  console.log('Request method:', req.method);
-  console.log('Request body:', JSON.stringify(req.body));
-
+async function handleHistoryNavigation(req, res, direction) {
   try {
-    if (req.method === 'POST') {
-      const { untrustedData } = req.body || {};
-      const buttonIndex = untrustedData?.buttonIndex;
+    let historicalData;
+    let currentIndex;
 
-      if (buttonIndex === 1) {
-        return handleHistoryNavigation(res, 'previous');
-      } else if (buttonIndex === 2) {
-        return handleHistoryNavigation(res, 'next');
-      } else if (buttonIndex === 3) {
-        // Handle share functionality
-        const shareText = encodeURIComponent(
-          "Check out some moments in history for today!\n\n" +
-          "Frame by @aaronv\n\n"
-        );
-        const shareLink = `https://warpcast.com/~/compose?text=${shareText}&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app%2F`;
-        
-        res.setHeader('Content-Type', 'text/html');
-        return res.status(200).send(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <meta property="fc:frame" content="vNext" />
-              <meta property="fc:frame:image" content="${VERCEL_OG_API}?text=${encodeURIComponent('Check out some moments in history for today!')}" />
-              <meta property="fc:frame:button:1" content="Back to History" />
-              <meta property="fc:frame:post_url" content="https://time-capsule-jade.vercel.app/api/historyFrame" />
-            </head>
-          </html>
-        `);
-      } else {
-        return handleHistoryNavigation(res, 'current');
+    // Check if todayData is available in environment variables
+    if (process.env.todayData) {
+      try {
+        historicalData = JSON.parse(process.env.todayData);
+      } catch (error) {
+        console.error('Failed to parse historical data:', error);
+        return res.status(500).json({ error: 'Failed to parse historical data' });
       }
-    } else if (req.method === 'GET') {
-      return handleHistoryNavigation(res, 'current');
+      currentIndex = parseInt(process.env.currentIndex || '0', 10);
     } else {
-      console.log('Method not allowed:', req.method);
-      return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+      console.error('Historical data not found in environment variable');
+      return res.status(500).json({ error: 'Historical data not available' });
     }
+
+    // Adjust the current index based on navigation direction
+    if (direction === 'next') {
+      currentIndex += 1;
+    } else if (direction === 'previous') {
+      currentIndex -= 1;
+    } else {
+      console.error('Invalid navigation direction:', direction);
+      return res.status(400).json({ error: 'Invalid navigation direction' });
+    }
+
+    // Ensure the currentIndex is wrapped around properly
+    process.env.currentIndex = currentIndex.toString();
+    const event = getEventByIndex(historicalData.Events, currentIndex);
+    
+    if (!event) {
+      console.error('Event not found at index:', currentIndex);
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    const text = `${event.year}: ${event.text}`;
+    const ogImageUrl = `${VERCEL_OG_API}?text=${encodeURIComponent(text)}`;
+
+    console.log(`Serving event: ${text} (Index: ${currentIndex})`);
+
+    // Prepare and send the HTML response
+    res.setHeader('Content-Type', 'text/html');
+    return res.status(200).send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta property="fc:frame" content="vNext" />
+          <meta property="fc:frame:image" content="${ogImageUrl}" />
+          <meta property="fc:frame:button:1:action" content="link" />
+          <meta property="fc:frame:button:1:target" content="/previous" />
+          <meta property="fc:frame:button:2:action" content="link" />
+          <meta property="fc:frame:button:2:target" content="/next" />
+          <meta property="fc:frame:button:3:action" content="link" />
+          <meta property="fc:frame:button:3:target" content="https://warpcast.com/~/compose?text=Check+out+today's+moments+in+history!%0A%0AFrame+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app" />
+        </head>
+        <body></body>
+      </html>
+    `);
+
   } catch (error) {
-    console.error('Error processing request:', error);
-    return res.status(500).json({ error: 'Internal Server Error: ' + error.message });
+    console.error('An unexpected error occurred:', error);
+    return res.status(500).json({ error: 'An unexpected error occurred' });
   }
 }

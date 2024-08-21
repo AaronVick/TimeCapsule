@@ -16,6 +16,10 @@ async function fetchHistoricalData() {
   }
 }
 
+function getRandomIndex(arrayLength) {
+  return Math.floor(Math.random() * arrayLength);
+}
+
 export default async function handler(req, res) {
   console.log('Received request to initialFetch handler');
   console.log('Request method:', req.method);
@@ -24,11 +28,15 @@ export default async function handler(req, res) {
     if (req.method === 'POST' || req.method === 'GET') {
       const historicalData = await fetchHistoricalData();
       process.env.todayData = JSON.stringify(historicalData);
-      process.env.currentIndex = '0';  // Initialize the current index
 
-      const event = historicalData.Events[0];  // Start with the first event
+      const randomIndex = getRandomIndex(historicalData.Events.length);
+      process.env.currentIndex = randomIndex.toString();  // Start with a random index
+
+      const event = historicalData.Events[randomIndex];  // Start with the random event
       const text = `${event.year}: ${event.text}`;
       const ogImageUrl = `${VERCEL_OG_API}?text=${encodeURIComponent(text)}`;
+
+      console.log(`Serving random event: ${text} (Index: ${randomIndex})`);
 
       res.setHeader('Content-Type', 'text/html');
       return res.status(200).send(`
@@ -40,7 +48,7 @@ export default async function handler(req, res) {
             <meta property="fc:frame:button:1" content="Previous" />
             <meta property="fc:frame:button:2" content="Next" />
             <meta property="fc:frame:button:3" content="Share" />
-            <meta property="fc:frame:post_url" content="https://time-capsule-jade.vercel.app/api/historyFrame" />
+            <meta property="fc:frame:post_url" content="https://warpcast.com/~/compose?text=Check+out+today's+moments+in+history!%0A%0AFrame+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app" />
           </head>
         </html>
       `);
