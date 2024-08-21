@@ -9,26 +9,6 @@ export default async function handler(req, res) {
     const { untrustedData } = req.body;
     const buttonIndex = untrustedData?.buttonIndex;
 
-    let direction;
-    if (buttonIndex === 1) direction = 'previous';
-    else if (buttonIndex === 2) direction = 'next';
-    else if (buttonIndex === 3) {
-      // Handle share action
-      return res.status(200).send(`
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta property="fc:frame" content="vNext" />
-          <meta property="fc:frame:image" content="${process.env.NEXT_PUBLIC_BASE_URL}/onthisday.png" />
-          <meta property="fc:frame:button:1" content="Back to History" />
-          <meta property="fc:frame:post_url" content="${process.env.NEXT_PUBLIC_BASE_URL}/api/historyFrame" />
-        </head>
-        </html>
-      `);
-    } else {
-      return res.status(400).json({ error: 'Invalid button index' });
-    }
-
     let historicalData;
     let currentIndex;
 
@@ -45,10 +25,25 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Historical data not available' });
     }
 
-    if (direction === 'next') {
-      currentIndex += 1;
-    } else if (direction === 'previous') {
+    if (buttonIndex === 1) {
       currentIndex -= 1;
+    } else if (buttonIndex === 2) {
+      currentIndex += 1;
+    } else if (buttonIndex === 3) {
+      // Handle share action
+      return res.status(200).send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta property="fc:frame" content="vNext" />
+          <meta property="fc:frame:image" content="${process.env.NEXT_PUBLIC_BASE_URL}/onthisday.png" />
+          <meta property="fc:frame:button:1" content="Back to History" />
+          <meta property="fc:frame:post_url" content="${process.env.NEXT_PUBLIC_BASE_URL}/api/historyFrame" />
+        </head>
+        </html>
+      `);
+    } else {
+      return res.status(400).json({ error: 'Invalid button index' });
     }
 
     process.env.currentIndex = currentIndex.toString();
@@ -74,8 +69,10 @@ export default async function handler(req, res) {
         <meta property="fc:frame:button:1" content="Previous" />
         <meta property="fc:frame:button:2" content="Next" />
         <meta property="fc:frame:button:3" content="Share" />
-        <meta property="fc:frame:target" content="https://warpcast.com/~/compose?text=Check+out+today's+moments+in+history!%0A%0AFrame+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app" />
-       </head>
+        <meta property="fc:frame:button:3:action" content="link" />
+        <meta property="fc:frame:button:3:target" content="https://warpcast.com/~/compose?text=Check+out+today's+moments+in+history!%0A%0AFrame+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app" />
+        <meta property="fc:frame:post_url" content="${process.env.NEXT_PUBLIC_BASE_URL}/api/historyFrame" />
+      </head>
       </html>
     `);
 
