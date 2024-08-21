@@ -9,15 +9,18 @@
   "routes": [
     {
       "src": "/api/historyFrame",
-      "dest": "/api/historyFrame"
+      "dest": "/api/historyFrame",
+      "methods": ["GET", "POST", "OPTIONS"]
     },
     {
       "src": "/api/initialFetch",
-      "dest": "/api/initialFetch"
+      "dest": "/api/initialFetch",
+      "methods": ["GET", "POST", "OPTIONS"]
     },
     {
       "src": "/api/og",
-      "dest": "/api/og"
+      "dest": "/api/og",
+      "methods": ["GET", "POST", "OPTIONS"]
     },
     {
       "src": "/(.*)",

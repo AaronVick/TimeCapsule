@@ -1,13 +1,20 @@
 const VERCEL_OG_API = `${process.env.NEXT_PUBLIC_BASE_URL}/api/og`;
 
 export default async function handler(req, res) {
+  console.log('Received request to historyFrame handler');
+  console.log('Request method:', req.method);
+  console.log('Request body:', JSON.stringify(req.body));
+
   try {
-    if (req.method !== 'POST') {
+    if (req.method !== 'POST' && req.method !== 'GET') {
       return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    const { untrustedData } = req.body;
-    const buttonIndex = untrustedData?.buttonIndex;
+    let buttonIndex = 0;
+    if (req.method === 'POST') {
+      const { untrustedData } = req.body;
+      buttonIndex = untrustedData?.buttonIndex;
+    }
 
     let historicalData;
     let currentIndex;
@@ -29,21 +36,6 @@ export default async function handler(req, res) {
       currentIndex -= 1;
     } else if (buttonIndex === 2) {
       currentIndex += 1;
-    } else if (buttonIndex === 3) {
-      // Handle share action
-      return res.status(200).send(`
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta property="fc:frame" content="vNext" />
-          <meta property="fc:frame:image" content="${process.env.NEXT_PUBLIC_BASE_URL}/onthisday.png" />
-          <meta property="fc:frame:button:1" content="Back to History" />
-          <meta property="fc:frame:post_url" content="${process.env.NEXT_PUBLIC_BASE_URL}/api/historyFrame" />
-        </head>
-        </html>
-      `);
-    } else {
-      return res.status(400).json({ error: 'Invalid button index' });
     }
 
     process.env.currentIndex = currentIndex.toString();
