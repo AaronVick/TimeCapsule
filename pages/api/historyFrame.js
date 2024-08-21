@@ -1,13 +1,3 @@
-import axios from 'axios';
-
-const VERCEL_OG_API = `${process.env.NEXT_PUBLIC_BASE_URL}/api/og`;
-
-function getEventByIndex(events, currentIndex) {
-  const totalEvents = events.length;
-  const index = ((currentIndex % totalEvents) + totalEvents) % totalEvents;
-  return events[index];
-}
-
 export default async function handler(req, res) {
   try {
     const { direction } = req.query;
