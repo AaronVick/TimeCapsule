@@ -1,6 +1,34 @@
+const VERCEL_OG_API = `${process.env.NEXT_PUBLIC_BASE_URL}/api/og`;
+
 export default async function handler(req, res) {
   try {
-    const { direction } = req.query;
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method Not Allowed' });
+    }
+
+    const { untrustedData } = req.body;
+    const buttonIndex = untrustedData?.buttonIndex;
+
+    let direction;
+    if (buttonIndex === 1) direction = 'previous';
+    else if (buttonIndex === 2) direction = 'next';
+    else if (buttonIndex === 3) {
+      // Handle share action
+      return res.status(200).send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta property="fc:frame" content="vNext" />
+          <meta property="fc:frame:image" content="${process.env.NEXT_PUBLIC_BASE_URL}/onthisday.png" />
+          <meta property="fc:frame:button:1" content="Back to History" />
+          <meta property="fc:frame:post_url" content="${process.env.NEXT_PUBLIC_BASE_URL}/api/historyFrame" />
+        </head>
+        </html>
+      `);
+    } else {
+      return res.status(400).json({ error: 'Invalid button index' });
+    }
+
     let historicalData;
     let currentIndex;
 
@@ -21,9 +49,6 @@ export default async function handler(req, res) {
       currentIndex += 1;
     } else if (direction === 'previous') {
       currentIndex -= 1;
-    } else {
-      console.error('Invalid navigation direction:', direction);
-      return res.status(400).json({ error: 'Invalid navigation direction' });
     }
 
     process.env.currentIndex = currentIndex.toString();
@@ -39,34 +64,18 @@ export default async function handler(req, res) {
 
     console.log(`Serving event: ${text} (Index: ${currentIndex})`);
 
-    // Updated HTML with button meta tags similar to findFren.js
     res.setHeader('Content-Type', 'text/html');
     return res.status(200).send(`
       <!DOCTYPE html>
       <html lang="en">
       <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta property="fc:frame" content="vNext" />
         <meta property="fc:frame:image" content="${ogImageUrl}" />
-        
-        <!-- Button Meta Tags -->
         <meta property="fc:frame:button:1" content="Previous" />
-        <meta property="fc:frame:button:1:action" content="link" />
-        <meta property="fc:frame:button:1:target" content="/api/historyFrame?direction=previous" />
-
         <meta property="fc:frame:button:2" content="Next" />
-        <meta property="fc:frame:button:2:action" content="link" />
-        <meta property="fc:frame:button:2:target" content="/api/historyFrame?direction=next" />
-
         <meta property="fc:frame:button:3" content="Share" />
-        <meta property="fc:frame:button:3:action" content="link" />
-        <meta property="fc:frame:button:3:target" content="https://warpcast.com/~/compose?text=Check+out+today's+moments+in+history!%0A%0AFrame+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app" />
+        <meta property="fc:frame:post_url" content="${process.env.NEXT_PUBLIC_BASE_URL}/api/historyFrame" />
       </head>
-      <body>
-        <h1>${text}</h1>
-        <img src="${ogImageUrl}" alt="Historical event" />
-      </body>
       </html>
     `);
 

@@ -47,30 +47,15 @@ export default async function handler(req, res) {
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>On This Day in History</title>
           
-          <!-- Farcaster Frame Meta Tags -->
           <meta property="fc:frame" content="vNext" />
           <meta property="fc:frame:image" content="${ogImageUrl}" />
           
-          <!-- Button Meta Tags -->
           <meta property="fc:frame:button:1" content="Previous" />
-          <meta property="fc:frame:button:1:action" content="link" />
-          <meta property="fc:frame:button:1:target" content="/api/historyFrame?direction=previous" />
-          
-          <meta property="fc:frame:button:1" content="Next" />
-          <meta property="fc:frame:button:2:action" content="link" />
-          <meta property="fc:frame:button:2:target" content="/api/historyFrame?direction=next" />
-          
-          <meta property="fc:frame:button:1" content="Share" />
-          <meta property="fc:frame:button:3:action" content="link" />
-          <meta property="fc:frame:button:3:target" content="https://warpcast.com/~/compose?text=Check+out+today's+moments+in+history!%0A%0AFrame+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app" />
+          <meta property="fc:frame:button:2" content="Next" />
+          <meta property="fc:frame:button:3" content="Share" />
+          <meta property="fc:frame:post_url" content="${process.env.NEXT_PUBLIC_BASE_URL}/api/historyFrame" />
         </head>
-        <body>
-          <main>
-            <h1>${text}</h1>
-            <img src="${ogImageUrl}" alt="Historical event" />
-          </main>
-        </body>
-        </html>
+      </html>
       `);
     } else {
       console.log('Method not allowed:', req.method);
