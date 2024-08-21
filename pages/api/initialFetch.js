@@ -45,11 +45,14 @@ export default async function handler(req, res) {
           <head>
             <meta property="fc:frame" content="vNext" />
             <meta property="fc:frame:image" content="${ogImageUrl}" />
-            <meta property="fc:frame:button:1" content="Previous" />
-            <meta property="fc:frame:button:2" content="Next" />
-            <meta property="fc:frame:button:3" content="Share" />
-            <meta property="fc:frame:post_url" content="https://warpcast.com/~/compose?text=Check+out+today's+moments+in+history!%0A%0AFrame+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app" />
+            <meta property="fc:frame:button:1:action" content="link" />
+            <meta property="fc:frame:button:1:target" content="/previous" />
+            <meta property="fc:frame:button:2:action" content="link" />
+            <meta property="fc:frame:button:2:target" content="/next" />
+            <meta property="fc:frame:button:3:action" content="link" />
+            <meta property="fc:frame:button:3:target" content="https://warpcast.com/~/compose?text=Check+out+today's+moments+in+history!%0A%0AFrame+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app" />
           </head>
+          <body></body>
         </html>
       `);
     } else {
