@@ -39,6 +39,7 @@ export default async function handler(req, res) {
 
     console.log(`Serving event: ${text} (Index: ${currentIndex})`);
 
+    // Minimal HTML for testing buttons
     res.setHeader('Content-Type', 'text/html');
     return res.status(200).send(`
       <!DOCTYPE html>
@@ -46,31 +47,23 @@ export default async function handler(req, res) {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>On This Day in History</title>
-        
-        <!-- Farcaster Frame Meta Tags -->
         <meta property="fc:frame" content="vNext" />
-        <meta property="fc:frame:image" content="${ogImageUrl}" />
         
         <!-- Button Meta Tags -->
-          <!-- Button Meta Tags with Labels -->
-            <meta property="fc:frame:button:1" content="Previous" />
-            <meta property="fc:frame:button:1:action" content="link" />
-            <meta property="fc:frame:button:1:target" content="/api/historyFrame?direction=previous" />
+        <meta property="fc:frame:button:1" content="Previous" />
+        <meta property="fc:frame:button:1:action" content="link" />
+        <meta property="fc:frame:button:1:target" content="/api/historyFrame?direction=previous" />
 
-            <meta property="fc:frame:button:2" content="Next" />
-            <meta property="fc:frame:button:2:action" content="link" />
-            <meta property="fc:frame:button:2:target" content="/api/historyFrame?direction=next" />
+        <meta property="fc:frame:button:2" content="Next" />
+        <meta property="fc:frame:button:2:action" content="link" />
+        <meta property="fc:frame:button:2:target" content="/api/historyFrame?direction=next" />
 
-            <meta property="fc:frame:button:3" content="Share" />
-            <meta property="fc:frame:button:3:action" content="link" />
-            <meta property="fc:frame:button:3:target" content="https://warpcast.com/~/compose?text=Check+out+today's+moments+in+history!%0A%0AFrame+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app" />
-        </head>
+        <meta property="fc:frame:button:3" content="Share" />
+        <meta property="fc:frame:button:3:action" content="link" />
+        <meta property="fc:frame:button:3:target" content="https://warpcast.com/~/compose?text=Check+out+today's+moments+in+history!%0A%0AFrame+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app" />
+      </head>
       <body>
-        <main>
-          <h1>${text}</h1>
-          <img src="${ogImageUrl}" alt="Historical event" />
-        </main>
+        <h1>Testing Buttons Visibility</h1>
       </body>
       </html>
     `);
@@ -79,10 +72,4 @@ export default async function handler(req, res) {
     console.error('An unexpected error occurred:', error);
     return res.status(500).json({ error: 'An unexpected error occurred' });
   }
-}
-
-function getEventByIndex(events, currentIndex) {
-  const totalEvents = events.length;
-  const index = ((currentIndex % totalEvents) + totalEvents) % totalEvents;
-  return events[index];
 }
