@@ -51,20 +51,16 @@ export default async function handler(req, res) {
 
     res.setHeader('Content-Type', 'text/html');
     return res.status(200).send(`
-     <!DOCTYPE html>
+      <!DOCTYPE html>
       <html lang="en">
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>On This Day in History</title>
         
-        <!-- Open Graph Meta Tags -->
-        <meta property="og:title" content="On This Day in History" />
-        <meta property="og:image" content="https://time-capsule-jade.vercel.app/onthisday.png" />
-        
         <!-- Farcaster Frame Meta Tags -->
         <meta property="fc:frame" content="vNext" />
-        <meta property="fc:frame:image" content="https://time-capsule-jade.vercel.app/onthisday.png" />
+        <meta property="fc:frame:image" content="${ogImageUrl}" />
         
         <!-- Button Meta Tags -->
         <meta property="fc:frame:button:1:action" content="link" />
@@ -76,12 +72,11 @@ export default async function handler(req, res) {
       </head>
       <body>
         <main>
-          <h1>Welcome to On This Day in History!</h1>
-          <p>Exploring historical events for today.</p>
+          <h1>${text}</h1>
+          <img src="${ogImageUrl}" alt="Historical event" />
         </main>
       </body>
       </html>
-
     `);
 
   } catch (error) {
