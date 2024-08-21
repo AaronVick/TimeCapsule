@@ -39,7 +39,6 @@ export default async function handler(req, res) {
 
     console.log(`Serving event: ${text} (Index: ${currentIndex})`);
 
-    // Updated HTML with button meta tags similar to findFren.js
     res.setHeader('Content-Type', 'text/html');
     return res.status(200).send(`
       <!DOCTYPE html>
@@ -50,7 +49,7 @@ export default async function handler(req, res) {
         <meta property="fc:frame" content="vNext" />
         <meta property="fc:frame:image" content="${ogImageUrl}" />
         
-        <!-- Button Meta Tags -->
+        <!-- Button Meta Tags with Labels -->
         <meta property="fc:frame:button:1" content="Previous" />
         <meta property="fc:frame:button:1:action" content="link" />
         <meta property="fc:frame:button:1:target" content="/api/historyFrame?direction=previous" />
@@ -65,19 +64,4 @@ export default async function handler(req, res) {
       </head>
       <body>
         <h1>${text}</h1>
-        <img src="${ogImageUrl}" alt="Historical event" />
-      </body>
-      </html>
-    `);
-
-  } catch (error) {
-    console.error('An unexpected error occurred:', error);
-    return res.status(500).json({ error: 'An unexpected error occurred' });
-  }
-}
-
-function getEventByIndex(events, currentIndex) {
-  const totalEvents = events.length;
-  const index = ((currentIndex % totalEvents) + totalEvents) % totalEvents;
-  return events[index];
-}
+        <img src="${ogImageUrl
