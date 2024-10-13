@@ -5,7 +5,7 @@ const VERCEL_OG_API = `${process.env.NEXT_PUBLIC_BASE_URL}/api/og`;
 
 let errorCount = 0;  // Track consecutive errors for Historypin
 
-// Your API Key and Shared Secret from Historypin (replace with actual values)
+// Fetch the API key and secret from environment variables
 const API_KEY = process.env.HISTORYPIN_API_KEY; 
 const API_SECRET = process.env.HISTORYPIN_API_SECRET; 
 
@@ -23,6 +23,11 @@ function generateAPIToken(apiPath, querydata) {
 
 // Fetch historical items (including photos with metadata) from Historypin API
 async function fetchHistorypinData(keyword) {
+  // Check if API key and secret are defined
+  if (!API_KEY || !API_SECRET) {
+    throw new Error('Historypin API key or secret is missing.');
+  }
+
   const apiPath = 'search.json';  // Example API path
   const querydata = {
     keyword: keyword,
