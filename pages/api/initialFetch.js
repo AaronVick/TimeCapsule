@@ -22,7 +22,7 @@ function generateAPIToken(apiPath, querydata) {
 }
 
 // Fetch historical items (including photos with metadata) from Historypin API
-async function fetchHistorypinData(keyword) {
+async function fetchHistorypinData(keyword = 'history') {  // Set a default keyword if none is provided
   // Check if API key and secret are defined
   if (!API_KEY || !API_SECRET) {
     throw new Error('Historypin API key or secret is missing.');
@@ -55,14 +55,14 @@ async function fetchHistorypinData(keyword) {
     }
 
     console.warn('No valid data found in Historypin response');
-    return null;  // Return null if no valid data found
+    throw new Error('No valid data found in Historypin response');  // Throw error to trigger fallback
   } catch (error) {
     console.error('Error fetching data from Historypin:', error.message);
-    throw error;  // Rethrow to increment error count
+    throw error;  // Rethrow to trigger fallback logic
   }
 }
 
-// Fallback to Muffin Labs if Historypin API fails 3 consecutive times
+// Fallback to Muffin Labs if Historypin API fails
 async function fetchMuffinLabsData() {
   const today = new Date();
   const month = today.getMonth() + 1;
@@ -88,9 +88,9 @@ export default async function handler(req, res) {
       let event;
       let photoUrl;
 
-      // Try Historypin first
+      // Try Historypin first with a default keyword if none is provided
       try {
-        historicalData = await fetchHistorypinData('');  // Provide keyword or leave blank for general search
+        historicalData = await fetchHistorypinData('history');  // Default keyword 'history'
         if (!historicalData) {
           throw new Error('No data found in Historypin response');
         }
@@ -101,9 +101,9 @@ export default async function handler(req, res) {
         errorCount += 1;
         console.error(`Historypin fetch attempt ${errorCount} failed:`, error.message);
 
-        if (errorCount >= 3) {
-          // Fallback to Muffin Labs after 3 consecutive failures
-          console.log('Switching to Muffin Labs after 3 failed attempts');
+        // Move to Muffin Labs if Historypin fails even once (or after several attempts)
+        if (errorCount >= 1) {  // Change this value if you want more attempts before fallback
+          console.log('Switching to Muffin Labs after Historypin error');
           const fallbackData = await fetchMuffinLabsData();
           event = `${fallbackData.Events[0].year}: ${fallbackData.Events[0].text}`;  // Example event format from Muffin Labs
           photoUrl = null;  // No images from Muffin Labs, fallback to Vercel OG for an image
