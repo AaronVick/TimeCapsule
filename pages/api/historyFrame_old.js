@@ -67,6 +67,7 @@ export default async function handler(req, res) {
       </head>
       </html>
     `);
+
   } catch (error) {
     console.error('An unexpected error occurred:', error);
     return res.status(500).json({ error: 'An unexpected error occurred' });

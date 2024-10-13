@@ -32,7 +32,7 @@ export default function handler(req) {
           {/* Display the image */}
           <div style={{ marginBottom: '20px' }}>
             <img 
-              src={photoUrl} 
+              src={photoUrl === 'default' ? 'https://your-fallback-url.com/fallback-image.png' : photoUrl} 
               alt="Historical event" 
               style={{ maxWidth: '100%', maxHeight: '50%' }} 
             />

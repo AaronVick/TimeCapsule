@@ -16,18 +16,20 @@ async function fetchHistoricalData() {
   }
 }
 
-// Fetch image from Historypin API or other external source
+// Correct API call to Historypin for fetching photos based on event keyword
 async function fetchImageData(keyword) {
   try {
     const response = await axios.get(`http://www.historypin.org/en/api/search/keyword:${keyword},pin:photo`);
-    const photos = response.data.items;
-    if (photos.length > 0) {
-      return photos[0].media_url;  // Get the first photo
+    const pins = response.data.items;  // Adjust this based on the structure returned by Historypin API
+
+    if (pins && pins.length > 0) {
+      // Assuming the API returns a 'media_url' field for photos
+      return pins[0].media_url;
     }
-    return null;  // Return null if no image is found
+    return null;  // Return null if no image found
   } catch (error) {
-    console.error('Error fetching image:', error);
-    return null;  // Return null if the API fails
+    console.error('Error fetching image from Historypin:', error);
+    return null;  // Return null if the API call fails
   }
 }
 
@@ -43,19 +45,18 @@ export default async function handler(req, res) {
       const randomIndex = Math.floor(Math.random() * historicalData.Events.length);
       const event = historicalData.Events[randomIndex];
 
-      // Fetch image based on event
+      // Fetch image based on event keyword (historical event description)
       const photoUrl = await fetchImageData(event.text);
 
-      // Fallback if no image is found
-      if (!photoUrl) {
-        console.log('No image found, skipping');
-        return res.status(404).json({ error: 'No image found' });
-      }
+      // Fallback to dynamic OG image if no photo found
+      const ogImageUrl = photoUrl
+        ? photoUrl
+        : `${VERCEL_OG_API}?text=${encodeURIComponent('No Image Available')}&photoUrl=default`;
 
       const text = `${event.year}: ${event.text}`;
-      const ogImageUrl = `${VERCEL_OG_API}?text=${encodeURIComponent(text)}&photoUrl=${encodeURIComponent(photoUrl)}`;
+      const finalOgImageUrl = `${VERCEL_OG_API}?text=${encodeURIComponent(text)}&photoUrl=${encodeURIComponent(ogImageUrl)}`;
 
-      console.log(`Serving random event with image: ${text} (Index: ${randomIndex})`);
+      console.log(`Serving event with image: ${text} (Index: ${randomIndex})`);
 
       res.setHeader('Content-Type', 'text/html');
       return res.status(200).send(`
@@ -67,7 +68,7 @@ export default async function handler(req, res) {
           <title>On This Day in History</title>
           
           <meta property="fc:frame" content="vNext" />
-          <meta property="fc:frame:image" content="${ogImageUrl}" />
+          <meta property="fc:frame:image" content="${finalOgImageUrl}" />
           
           <meta property="fc:frame:button:1" content="Previous" />
           <meta property="fc:frame:button:2" content="Next" />
