@@ -1,6 +1,5 @@
 import axios from 'axios';
-import hmacSHA256 from 'crypto-js/hmac-sha256';
-import { enc } from 'crypto-js';
+import crypto from 'crypto';
 
 const VERCEL_OG_API = `${process.env.NEXT_PUBLIC_BASE_URL}/api/og`;
 
@@ -18,8 +17,8 @@ function generateAPIToken(apiPath, querydata) {
     .map(key => `${key}=${orderedData[key]}`)
     .join('&');
 
-  // Generate the HMAC SHA256 hash
-  return hmacSHA256(bodyString, API_SECRET).toString(enc.Hex);
+  // Generate the HMAC SHA256 hash using Node.js crypto
+  return crypto.createHmac('sha256', API_SECRET).update(bodyString).digest('hex');
 }
 
 // Fetch historical items (including photos with metadata) from Historypin API
