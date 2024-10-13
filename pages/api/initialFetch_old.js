@@ -16,19 +16,8 @@ async function fetchHistoricalData() {
   }
 }
 
-// Fetch image from Historypin API or other external source
-async function fetchImageData(keyword) {
-  try {
-    const response = await axios.get(`http://www.historypin.org/en/api/search/keyword:${keyword},pin:photo`);
-    const photos = response.data.items;
-    if (photos.length > 0) {
-      return photos[0].media_url;  // Get the first photo
-    }
-    return null;  // Return null if no image is found
-  } catch (error) {
-    console.error('Error fetching image:', error);
-    return null;  // Return null if the API fails
-  }
+function getRandomIndex(arrayLength) {
+  return Math.floor(Math.random() * arrayLength);
 }
 
 export default async function handler(req, res) {
@@ -40,22 +29,14 @@ export default async function handler(req, res) {
       const historicalData = await fetchHistoricalData();
       process.env.todayData = JSON.stringify(historicalData);
 
-      const randomIndex = Math.floor(Math.random() * historicalData.Events.length);
-      const event = historicalData.Events[randomIndex];
+      const randomIndex = getRandomIndex(historicalData.Events.length);
+      process.env.currentIndex = randomIndex.toString();  // Start with a random index
 
-      // Fetch image based on event
-      const photoUrl = await fetchImageData(event.text);
-
-      // Fallback if no image is found
-      if (!photoUrl) {
-        console.log('No image found, skipping');
-        return res.status(404).json({ error: 'No image found' });
-      }
-
+      const event = historicalData.Events[randomIndex];  // Start with the random event
       const text = `${event.year}: ${event.text}`;
-      const ogImageUrl = `${VERCEL_OG_API}?text=${encodeURIComponent(text)}&photoUrl=${encodeURIComponent(photoUrl)}`;
+      const ogImageUrl = `${VERCEL_OG_API}?text=${encodeURIComponent(text)}`;
 
-      console.log(`Serving random event with image: ${text} (Index: ${randomIndex})`);
+      console.log(`Serving random event: ${text} (Index: ${randomIndex})`);
 
       res.setHeader('Content-Type', 'text/html');
       return res.status(200).send(`
