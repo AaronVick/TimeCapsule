@@ -1,56 +1,8 @@
 import axios from 'axios';
-import crypto from 'crypto';
 
 const VERCEL_OG_API = `${process.env.NEXT_PUBLIC_BASE_URL}/api/og`;
 
-let errorCount = 0;  // Track consecutive errors for Historypin
-
-// Fetch the API key and secret from environment variables
-const API_KEY = process.env.HISTORYPIN_API_KEY; 
-const API_SECRET = process.env.HISTORYPIN_API_SECRET; 
-
-// Function to generate the API token
-function generateAPIToken(apiPath, querydata) {
-  const orderedData = { ...querydata, api_path: apiPath, api_key: API_KEY };
-  const bodyString = Object.keys(orderedData)
-    .sort()
-    .map(key => `${key}=${orderedData[key]}`)
-    .join('&');
-
-  // Generate the HMAC SHA256 hash using Node.js crypto
-  return crypto.createHmac('sha256', API_SECRET).update(bodyString).digest('hex');
-}
-
-// Fetch historical items from Historypin API
-async function fetchHistorypinData(keyword = 'history') {
-  if (!API_KEY || !API_SECRET) {
-    throw new Error('Historypin API key or secret is missing.');
-  }
-
-  const apiPath = 'search.json';
-  const querydata = { keyword, pin: 'photo', special: 'has comments' };
-  const apiToken = generateAPIToken(apiPath, querydata);
-  const queryString = Object.keys(querydata)
-    .map(key => `${key}=${encodeURIComponent(querydata[key])}`)
-    .join('&');
-  const url = `https://www.historypin.org/en/api/${apiPath}?${queryString}&api_token=${apiToken}&api_key=${API_KEY}`;
-
-  try {
-    const response = await axios.get(url);
-    const pins = response.data.items;
-
-    if (pins && pins.length > 0) {
-      return pins[0];  // Return the first valid item
-    }
-
-    throw new Error('No valid data found in Historypin response');
-  } catch (error) {
-    throw error;  // Trigger fallback if error occurs
-  }
-}
-
-// Fallback to Muffin Labs
-async function fetchMuffinLabsData() {
+async function fetchHistoricalData() {
   const today = new Date();
   const month = today.getMonth() + 1;
   const day = today.getDate();
@@ -59,54 +11,60 @@ async function fetchMuffinLabsData() {
     const response = await axios.get(`https://history.muffinlabs.com/date/${month}/${day}`);
     return response.data.data;
   } catch (error) {
-    throw new Error('Failed to fetch data from Muffin Labs');
+    console.error('Error fetching historical data:', error);
+    throw new Error('Failed to fetch historical data');
   }
 }
 
+function getRandomIndex(arrayLength) {
+  return Math.floor(Math.random() * arrayLength);
+}
+
 export default async function handler(req, res) {
+  console.log('Received request to initialFetch handler');
+  console.log('Request method:', req.method);
+
   try {
-    let historicalData, event, photoUrl;
-    try {
-      historicalData = await fetchHistorypinData('history');
-      event = `${historicalData.title} (${historicalData.time})`;
-      photoUrl = historicalData.media_url;
-      errorCount = 0;
-    } catch (error) {
-      errorCount += 1;
-      if (errorCount >= 1) {
-        const fallbackData = await fetchMuffinLabsData();
-        event = `${fallbackData.Events[0].year}: ${fallbackData.Events[0].text}`;
-        photoUrl = null;
-        errorCount = 0;
-      } else {
-        return res.status(500).json({ error: `Failed fetching from Historypin: ${error.message}` });
-      }
-    }
+    if (req.method === 'POST' || req.method === 'GET') {
+      const historicalData = await fetchHistoricalData();
+      process.env.todayData = JSON.stringify(historicalData);
 
-    const fallbackText = `No Image Available for ${event}`;
-    const finalOgImageUrl = photoUrl
-      ? photoUrl
-      : `${VERCEL_OG_API}?text=${encodeURIComponent(fallbackText)}&photoUrl=default`;
+      const randomIndex = getRandomIndex(historicalData.Events.length);
+      process.env.currentIndex = randomIndex.toString();  // Start with a random index
 
-    const ogImageUrlWithText = `${VERCEL_OG_API}?text=${encodeURIComponent(event)}&photoUrl=${encodeURIComponent(finalOgImageUrl)}`;
+      const event = historicalData.Events[randomIndex];  // Start with the random event
+      const text = `${event.year}: ${event.text}`;
+      const ogImageUrl = `${VERCEL_OG_API}?text=${encodeURIComponent(text)}`;
 
-    res.setHeader('Content-Type', 'text/html');
-    return res.status(200).send(`
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta property="fc:frame" content="vNext" />
-        <meta property="fc:frame:image" content="${ogImageUrlWithText}" />
-        <meta property="fc:frame:button:1" content="Previous" />
-        <meta property="fc:frame:button:2" content="Next" />
-        <meta property="fc:frame:button:3" content="Share" />
-        <meta property="fc:frame:button:3:target" content="https://warpcast.com/~/compose?text=Check+out+today's+moments+in+history!" />
-        <meta property="fc:frame:post_url" content="${process.env.NEXT_PUBLIC_BASE_URL}/api/historyFrame" />
-      </head>
+      console.log(`Serving random event: ${text} (Index: ${randomIndex})`);
+
+      res.setHeader('Content-Type', 'text/html');
+      return res.status(200).send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>On This Day in History</title>
+          
+          <meta property="fc:frame" content="vNext" />
+          <meta property="fc:frame:image" content="${ogImageUrl}" />
+          
+          <meta property="fc:frame:button:1" content="Previous" />
+          <meta property="fc:frame:button:2" content="Next" />
+          <meta property="fc:frame:button:3" content="Share" />
+          <meta property="fc:frame:button:3:action" content="link" />
+          <meta property="fc:frame:button:3:target" content="https://warpcast.com/~/compose?text=Check+out+today's+moments+in+history!%0A%0AFrame+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app" />
+          <meta property="fc:frame:post_url" content="${process.env.NEXT_PUBLIC_BASE_URL}/api/historyFrame" />
+        </head>
       </html>
-    `);
+      `);
+    } else {
+      console.log('Method not allowed:', req.method);
+      return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+    }
   } catch (error) {
-    return res.status(500).json({ error: 'Internal Server Error' });
+    console.error('Error processing request:', error);
+    return res.status(500).json({ error: 'Internal Server Error: ' + error.message });
   }
 }

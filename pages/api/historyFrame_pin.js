@@ -1,5 +1,30 @@
 const VERCEL_OG_API = `${process.env.NEXT_PUBLIC_BASE_URL}/api/og`;
 
+// Function to fetch historical data (e.g., from initialFetch or MuffinLabs)
+async function fetchHistoricalData() {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/initialFetch`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch historical data');
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      const data = await response.json();
+      return data.Events; // Assuming response contains an array of events
+    } else {
+      const textResponse = await response.text();
+      console.error('Unexpected non-JSON response:', textResponse);
+      throw new Error('Received non-JSON response from initialFetch');
+    }
+
+  } catch (error) {
+    console.error('Error fetching historical data:', error.message);
+    return null;
+  }
+}
+
 export default async function handler(req, res) {
   console.log('Received request to historyFrame handler');
   console.log('Request method:', req.method);
@@ -16,31 +41,27 @@ export default async function handler(req, res) {
       buttonIndex = untrustedData?.buttonIndex;
     }
 
-    let historicalData;
-    let currentIndex;
+    // Fetch the latest historical data from initialFetch or a similar API
+    const historicalData = await fetchHistoricalData();
 
-    if (process.env.todayData) {
-      try {
-        historicalData = JSON.parse(process.env.todayData);
-      } catch (error) {
-        console.error('Failed to parse historical data:', error);
-        return res.status(500).json({ error: 'Failed to parse historical data' });
-      }
-      currentIndex = parseInt(process.env.currentIndex || '0', 10);
-    } else {
-      console.error('Historical data not found in environment variable');
-      return res.status(500).json({ error: 'Historical data not available' });
+    if (!historicalData || historicalData.length === 0) {
+      console.error('No historical data found.');
+      return res.status(500).json({ error: 'No historical data found' });
     }
 
+    let currentIndex = 0; // Start from index 0 if undefined
+
+    // Adjust index based on button clicked (previous or next)
     if (buttonIndex === 1) {
       currentIndex -= 1;
     } else if (buttonIndex === 2) {
       currentIndex += 1;
     }
 
-    process.env.currentIndex = currentIndex.toString();
-    const event = getEventByIndex(historicalData.Events, currentIndex);
-    
+    // Ensure the index is valid
+    currentIndex = (currentIndex + historicalData.length) % historicalData.length;
+    const event = historicalData[currentIndex];
+
     if (!event) {
       console.error('Event not found at index:', currentIndex);
       return res.status(404).json({ error: 'Event not found' });
@@ -67,15 +88,8 @@ export default async function handler(req, res) {
       </head>
       </html>
     `);
-
   } catch (error) {
-    console.error('An unexpected error occurred:', error);
-    return res.status(500).json({ error: 'An unexpected error occurred' });
+    console.error('An unexpected error occurred:', error.message);
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
-}
-
-function getEventByIndex(events, currentIndex) {
-  const totalEvents = events.length;
-  const index = ((currentIndex % totalEvents) + totalEvents) % totalEvents;
-  return events[index];
 }
