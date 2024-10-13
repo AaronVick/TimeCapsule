@@ -40,15 +40,19 @@ async function fetchHistorypinData(keyword) {
   const url = `https://www.historypin.org/en/api/${apiPath}?${queryString}&api_token=${apiToken}&api_key=${API_KEY}`;
 
   try {
+    console.log('Fetching data from Historypin URL:', url);
     const response = await axios.get(url);
     const pins = response.data.items;
 
     if (pins && pins.length > 0) {
+      console.log('Successfully fetched data from Historypin:', pins[0]);
       return pins[0];  // Return the first valid item with photo and comments
     }
+
+    console.warn('No valid data found in Historypin response');
     return null;  // Return null if no valid data found
   } catch (error) {
-    console.error('Error fetching data from Historypin:', error);
+    console.error('Error fetching data from Historypin:', error.message);
     throw error;  // Rethrow to increment error count
   }
 }
@@ -60,10 +64,11 @@ async function fetchMuffinLabsData() {
   const day = today.getDate();
   
   try {
+    console.log('Fetching data from Muffin Labs');
     const response = await axios.get(`https://history.muffinlabs.com/date/${month}/${day}`);
     return response.data.data;  // Return historical data from Muffin Labs
   } catch (error) {
-    console.error('Error fetching data from Muffin Labs:', error);
+    console.error('Error fetching data from Muffin Labs:', error.message);
     throw new Error('Failed to fetch data from Muffin Labs');
   }
 }
@@ -89,7 +94,7 @@ export default async function handler(req, res) {
         errorCount = 0;  // Reset error count on success
       } catch (error) {
         errorCount += 1;
-        console.error(`Historypin fetch attempt ${errorCount} failed`);
+        console.error(`Historypin fetch attempt ${errorCount} failed:`, error.message);
 
         if (errorCount >= 3) {
           // Fallback to Muffin Labs after 3 consecutive failures
@@ -99,7 +104,7 @@ export default async function handler(req, res) {
           photoUrl = null;  // No images from Muffin Labs, fallback to Vercel OG for an image
           errorCount = 0;  // Reset error count on successful fallback
         } else {
-          return res.status(500).json({ error: 'Failed fetching from Historypin, but not switching to Muffin Labs yet' });
+          return res.status(500).json({ error: `Failed fetching from Historypin (attempt ${errorCount}): ${error.message}` });
         }
       }
 
@@ -141,7 +146,7 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
     }
   } catch (error) {
-    console.error('Error processing request:', error);
-    return res.status(500).json({ error: 'Internal Server Error: ' + error.message });
+    console.error('Error processing request:', error.message);
+    return res.status(500).json({ error: `Internal Server Error: ${error.message}` });
   }
 }
