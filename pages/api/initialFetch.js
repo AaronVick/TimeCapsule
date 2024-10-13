@@ -1,13 +1,47 @@
 import axios from 'axios';
+import hmacSHA256 from 'crypto-js/hmac-sha256';
+import { enc } from 'crypto-js';
 
 const VERCEL_OG_API = `${process.env.NEXT_PUBLIC_BASE_URL}/api/og`;
 
 let errorCount = 0;  // Track consecutive errors for Historypin
 
+// Your API Key and Shared Secret from Historypin (replace with actual values)
+const API_KEY = process.env.HISTORYPIN_API_KEY; 
+const API_SECRET = process.env.HISTORYPIN_API_SECRET; 
+
+// Function to generate the API token
+function generateAPIToken(apiPath, querydata) {
+  const orderedData = { ...querydata, api_path: apiPath, api_key: API_KEY };
+  const bodyString = Object.keys(orderedData)
+    .sort()
+    .map(key => `${key}=${orderedData[key]}`)
+    .join('&');
+
+  // Generate the HMAC SHA256 hash
+  return hmacSHA256(bodyString, API_SECRET).toString(enc.Hex);
+}
+
 // Fetch historical items (including photos with metadata) from Historypin API
 async function fetchHistorypinData(keyword) {
+  const apiPath = 'search.json';  // Example API path
+  const querydata = {
+    keyword: keyword,
+    pin: 'photo',
+    special: 'has comments',
+  };
+
+  // Generate the API token for authentication
+  const apiToken = generateAPIToken(apiPath, querydata);
+
+  // Construct the URL with the API token
+  const queryString = Object.keys(querydata)
+    .map(key => `${key}=${encodeURIComponent(querydata[key])}`)
+    .join('&');
+  const url = `https://www.historypin.org/en/api/${apiPath}?${queryString}&api_token=${apiToken}&api_key=${API_KEY}`;
+
   try {
-    const response = await axios.get(`http://www.historypin.org/en/api/search/keyword:${keyword},pin:photo,special:has%20comments`);
+    const response = await axios.get(url);
     const pins = response.data.items;
 
     if (pins && pins.length > 0) {
@@ -48,11 +82,16 @@ export default async function handler(req, res) {
       // Try Historypin first
       try {
         historicalData = await fetchHistorypinData('');  // Provide keyword or leave blank for general search
+        if (!historicalData) {
+          throw new Error('No data found in Historypin response');
+        }
         event = `${historicalData.title} (${historicalData.time})`;  // Example format
         photoUrl = historicalData.media_url;
         errorCount = 0;  // Reset error count on success
       } catch (error) {
         errorCount += 1;
+        console.error(`Historypin fetch attempt ${errorCount} failed`);
+
         if (errorCount >= 3) {
           // Fallback to Muffin Labs after 3 consecutive failures
           console.log('Switching to Muffin Labs after 3 failed attempts');
@@ -61,7 +100,7 @@ export default async function handler(req, res) {
           photoUrl = null;  // No images from Muffin Labs, fallback to Vercel OG for an image
           errorCount = 0;  // Reset error count on successful fallback
         } else {
-          throw new Error('Failed fetching from Historypin, but not switching to Muffin Labs yet');
+          return res.status(500).json({ error: 'Failed fetching from Historypin, but not switching to Muffin Labs yet' });
         }
       }
 
