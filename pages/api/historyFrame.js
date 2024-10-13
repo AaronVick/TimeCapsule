@@ -1,6 +1,30 @@
 const VERCEL_OG_API = `${process.env.NEXT_PUBLIC_BASE_URL}/api/og`;
 
-// Assume we are using the data fetched from initialFetch or MuffinLabs directly
+// Function to fetch historical data (e.g., from initialFetch or MuffinLabs)
+async function fetchHistoricalData() {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/initialFetch`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch historical data');
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      const data = await response.json();
+      return data.Events; // Assuming response contains an array of events
+    } else {
+      const textResponse = await response.text();
+      console.error('Unexpected non-JSON response:', textResponse);
+      throw new Error('Received non-JSON response from initialFetch');
+    }
+
+  } catch (error) {
+    console.error('Error fetching historical data:', error.message);
+    return null;
+  }
+}
+
 export default async function handler(req, res) {
   console.log('Received request to historyFrame handler');
   console.log('Request method:', req.method);
@@ -20,7 +44,7 @@ export default async function handler(req, res) {
     // Fetch the latest historical data from initialFetch or a similar API
     const historicalData = await fetchHistoricalData();
 
-    if (!historicalData) {
+    if (!historicalData || historicalData.length === 0) {
       console.error('No historical data found.');
       return res.status(500).json({ error: 'No historical data found' });
     }
@@ -67,20 +91,5 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('An unexpected error occurred:', error.message);
     return res.status(500).json({ error: 'Internal Server Error' });
-  }
-}
-
-// Function to fetch historical data (e.g., from initialFetch or MuffinLabs)
-async function fetchHistoricalData() {
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/initialFetch`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch historical data');
-    }
-    const data = await response.json();
-    return data.Events; // Assuming response contains an array of events
-  } catch (error) {
-    console.error('Error fetching historical data:', error.message);
-    return null;
   }
 }
