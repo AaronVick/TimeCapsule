@@ -19,6 +19,7 @@ export default async function handler(req, res) {
     let historicalData;
     let currentIndex;
 
+    // Ensure we're using stored data properly, or throw an error
     if (process.env.todayData) {
       try {
         historicalData = JSON.parse(process.env.todayData);
@@ -32,6 +33,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Historical data not available' });
     }
 
+    // Adjust index based on button clicked
     if (buttonIndex === 1) {
       currentIndex -= 1;
     } else if (buttonIndex === 2) {

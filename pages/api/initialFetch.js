@@ -21,137 +21,92 @@ function generateAPIToken(apiPath, querydata) {
   return crypto.createHmac('sha256', API_SECRET).update(bodyString).digest('hex');
 }
 
-// Fetch historical items (including photos with metadata) from Historypin API
-async function fetchHistorypinData(keyword = 'history') {  // Set a default keyword if none is provided
-  // Check if API key and secret are defined
+// Fetch historical items from Historypin API
+async function fetchHistorypinData(keyword = 'history') {
   if (!API_KEY || !API_SECRET) {
     throw new Error('Historypin API key or secret is missing.');
   }
 
-  const apiPath = 'search.json';  // Example API path
-  const querydata = {
-    keyword: keyword,
-    pin: 'photo',
-    special: 'has comments',
-  };
-
-  // Generate the API token for authentication
+  const apiPath = 'search.json';
+  const querydata = { keyword, pin: 'photo', special: 'has comments' };
   const apiToken = generateAPIToken(apiPath, querydata);
-
-  // Construct the URL with the API token
   const queryString = Object.keys(querydata)
     .map(key => `${key}=${encodeURIComponent(querydata[key])}`)
     .join('&');
   const url = `https://www.historypin.org/en/api/${apiPath}?${queryString}&api_token=${apiToken}&api_key=${API_KEY}`;
 
   try {
-    console.log('Fetching data from Historypin URL:', url);
     const response = await axios.get(url);
     const pins = response.data.items;
 
     if (pins && pins.length > 0) {
-      console.log('Successfully fetched data from Historypin:', pins[0]);
-      return pins[0];  // Return the first valid item with photo and comments
+      return pins[0];  // Return the first valid item
     }
 
-    console.warn('No valid data found in Historypin response');
-    throw new Error('No valid data found in Historypin response');  // Throw error to trigger fallback
+    throw new Error('No valid data found in Historypin response');
   } catch (error) {
-    console.error('Error fetching data from Historypin:', error.message);
-    throw error;  // Rethrow to trigger fallback logic
+    throw error;  // Trigger fallback if error occurs
   }
 }
 
-// Fallback to Muffin Labs if Historypin API fails
+// Fallback to Muffin Labs
 async function fetchMuffinLabsData() {
   const today = new Date();
   const month = today.getMonth() + 1;
   const day = today.getDate();
   
   try {
-    console.log('Fetching data from Muffin Labs');
     const response = await axios.get(`https://history.muffinlabs.com/date/${month}/${day}`);
-    return response.data.data;  // Return historical data from Muffin Labs
+    return response.data.data;
   } catch (error) {
-    console.error('Error fetching data from Muffin Labs:', error.message);
     throw new Error('Failed to fetch data from Muffin Labs');
   }
 }
 
 export default async function handler(req, res) {
-  console.log('Received request to initialFetch handler');
-  console.log('Request method:', req.method);
-
   try {
-    if (req.method === 'POST' || req.method === 'GET') {
-      let historicalData;
-      let event;
-      let photoUrl;
-
-      // Try Historypin first with a default keyword if none is provided
-      try {
-        historicalData = await fetchHistorypinData('history');  // Default keyword 'history'
-        if (!historicalData) {
-          throw new Error('No data found in Historypin response');
-        }
-        event = `${historicalData.title} (${historicalData.time})`;  // Example format
-        photoUrl = historicalData.media_url;
-        errorCount = 0;  // Reset error count on success
-      } catch (error) {
-        errorCount += 1;
-        console.error(`Historypin fetch attempt ${errorCount} failed:`, error.message);
-
-        // Move to Muffin Labs if Historypin fails even once (or after several attempts)
-        if (errorCount >= 1) {  // Change this value if you want more attempts before fallback
-          console.log('Switching to Muffin Labs after Historypin error');
-          const fallbackData = await fetchMuffinLabsData();
-          event = `${fallbackData.Events[0].year}: ${fallbackData.Events[0].text}`;  // Example event format from Muffin Labs
-          photoUrl = null;  // No images from Muffin Labs, fallback to Vercel OG for an image
-          errorCount = 0;  // Reset error count on successful fallback
-        } else {
-          return res.status(500).json({ error: `Failed fetching from Historypin (attempt ${errorCount}): ${error.message}` });
-        }
+    let historicalData, event, photoUrl;
+    try {
+      historicalData = await fetchHistorypinData('history');
+      event = `${historicalData.title} (${historicalData.time})`;
+      photoUrl = historicalData.media_url;
+      errorCount = 0;
+    } catch (error) {
+      errorCount += 1;
+      if (errorCount >= 1) {
+        const fallbackData = await fetchMuffinLabsData();
+        event = `${fallbackData.Events[0].year}: ${fallbackData.Events[0].text}`;
+        photoUrl = null;
+        errorCount = 0;
+      } else {
+        return res.status(500).json({ error: `Failed fetching from Historypin: ${error.message}` });
       }
-
-      // Fallback to dynamic OG image if no photo found
-      const fallbackText = `No Image Available for ${event}`;
-      const fallbackOgImageUrl = `${VERCEL_OG_API}?text=${encodeURIComponent(fallbackText)}&photoUrl=default`;
-
-      const finalOgImageUrl = photoUrl
-        ? photoUrl
-        : fallbackOgImageUrl;
-
-      const ogImageUrlWithText = `${VERCEL_OG_API}?text=${encodeURIComponent(event)}&photoUrl=${encodeURIComponent(finalOgImageUrl)}`;
-
-      console.log(`Serving event with image: ${event}`);
-
-      res.setHeader('Content-Type', 'text/html');
-      return res.status(200).send(`
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>On This Day in History</title>
-          
-          <meta property="fc:frame" content="vNext" />
-          <meta property="fc:frame:image" content="${ogImageUrlWithText}" />
-          
-          <meta property="fc:frame:button:1" content="Previous" />
-          <meta property="fc:frame:button:2" content="Next" />
-          <meta property="fc:frame:button:3" content="Share" />
-          <meta property="fc:frame:button:3:action" content="link" />
-          <meta property="fc:frame:button:3:target" content="https://warpcast.com/~/compose?text=Check+out+today's+moments+in+history!%0A%0AFrame+by+%40aaronv&embeds[]=https%3A%2F%2Ftime-capsule-jade.vercel.app" />
-          <meta property="fc:frame:post_url" content="${process.env.NEXT_PUBLIC_BASE_URL}/api/historyFrame" />
-        </head>
-      </html>
-      `);
-    } else {
-      console.log('Method not allowed:', req.method);
-      return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
     }
+
+    const fallbackText = `No Image Available for ${event}`;
+    const finalOgImageUrl = photoUrl
+      ? photoUrl
+      : `${VERCEL_OG_API}?text=${encodeURIComponent(fallbackText)}&photoUrl=default`;
+
+    const ogImageUrlWithText = `${VERCEL_OG_API}?text=${encodeURIComponent(event)}&photoUrl=${encodeURIComponent(finalOgImageUrl)}`;
+
+    res.setHeader('Content-Type', 'text/html');
+    return res.status(200).send(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta property="fc:frame" content="vNext" />
+        <meta property="fc:frame:image" content="${ogImageUrlWithText}" />
+        <meta property="fc:frame:button:1" content="Previous" />
+        <meta property="fc:frame:button:2" content="Next" />
+        <meta property="fc:frame:button:3" content="Share" />
+        <meta property="fc:frame:button:3:target" content="https://warpcast.com/~/compose?text=Check+out+today's+moments+in+history!" />
+        <meta property="fc:frame:post_url" content="${process.env.NEXT_PUBLIC_BASE_URL}/api/historyFrame" />
+      </head>
+      </html>
+    `);
   } catch (error) {
-    console.error('Error processing request:', error.message);
-    return res.status(500).json({ error: `Internal Server Error: ${error.message}` });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 }
